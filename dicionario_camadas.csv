@@ -21,11 +21,12 @@ geomorfologia_ibge,"MultiPolygon,Polygon",104.0,IDE-Sisema (2026),Geomorfologia 
 cobertura_florestal_2009,"MultiPolygon,Polygon",3931.0,IDE-Sisema (2026),Fitofisionomias e cobertura florestal,"id, gid, class_name, class_id, parts, length, area, hectares"
 processos_minerarios,Polygon,364.0,ANM – SIGMINE (nov/2026),Processos ativos e unidade geológica,"PROCESSO, NUMERO, ANO, FASE, NOME, SUBS, USO, AREA_HA, UF, ULT_EVENTO, ID, OBJECTID, DSProcesso, Shape.STArea(), Shape.STLength(), unidade_geologica"
 zoneamento_insumos,MultiPolygon,3.0,Próprios autores (2026),Zoneamento preliminar de rochas para insumo agrícola,zona
-rasters/capacidade_uso_12m5.tif,raster,,ver relatório,capacidade uso 12m5,valor do pixel
+rasters/capacidade_uso_30m.tif,raster,,ver relatório,capacidade uso 30m,valor do pixel
+rasters/declive_lepsch_topodata_30m.tif,raster,,ver relatório,declive lepsch topodata 30m,valor do pixel
+rasters/capacidade_uso_versao_anterior_12m5.tif,raster,,ver relatório,capacidade uso versao anterior 12m5,valor do pixel
 rasters/uso_cobertura_mapbiomas_2025_30m.tif,raster,,ver relatório,uso cobertura mapbiomas 2025 30m,valor do pixel
 rasters/uso_cobertura_mapbiomas_1985_30m.tif,raster,,ver relatório,uso cobertura mapbiomas 1985 30m,valor do pixel
 rasters/declividade_pct_topodata_30m.tif,raster,,ver relatório,declividade pct topodata 30m,valor do pixel
 rasters/declividade_classes_embrapa_topodata_30m.tif,raster,,ver relatório,declividade classes embrapa topodata 30m,valor do pixel
 rasters/mde_topodata_30m.tif,raster,,ver relatório,mde topodata 30m,valor do pixel
-rasters/capacidade_uso_reamostrada_30m.tif,raster,,ver relatório,capacidade uso reamostrada 30m,valor do pixel
 rasters/zoneamento_insumos_30m.tif,raster,,ver relatório,zoneamento insumos 30m,valor do pixel
