@@ -340,11 +340,26 @@ dialog button { float: right; }
       const div = document.createElement("div");
       div.className = "camada";
       div.innerHTML = `<label><input type="checkbox"><span>${esc(c.titulo)} <span class="n">(${c.n.toLocaleString("pt-BR")})</span></span></label>`
-        + (c.estilo.coropletico ? `<select></select>` : "")
+        + (c.estilo.coropletico || c.estilo.opcoes ? `<select></select>` : "")
         + `<div class="carregando"></div><div class="legenda" hidden></div>`;
       const cb = div.querySelector("input"), leg = div.querySelector(".legenda"), aviso = div.querySelector(".carregando");
       const sel = div.querySelector("select");
-      if (sel) {
+      if (sel && c.estilo.opcoes) {  // legenda categórica por outro campo (ex.: fase, substância, uso)
+        Object.keys(c.estilo.opcoes).forEach(k => {
+          const o = document.createElement("option"); o.value = k; o.textContent = "Legenda por: " + (c.campos[k] || k);
+          if (k === c.estilo.campo) o.selected = true; sel.appendChild(o);
+        });
+        sel.addEventListener("change", () => {
+          if (classe && classe.id === c.id) limparClasse();
+          c.estilo.campo = sel.value; c.estilo.cores = c.estilo.opcoes[sel.value];
+          const l = camadasLeaflet[c.id];
+          if (l) l.eachLayer(x => {
+            const cor = corDe(c, x.feature.properties);
+            if (x.setStyle) x.setStyle(x instanceof L.CircleMarker ? { fillColor: cor } : estiloDe(c)(x.feature));
+          });
+          leg.innerHTML = legendaHTML(c);
+        });
+      } else if (sel) {
         c.coro = { campo: c.estilo.padrao, quebras: [] };
         (c.estilo.numericos || []).forEach(k => {
           const o = document.createElement("option"); o.value = k; o.textContent = c.campos[k];
