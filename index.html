@@ -37,6 +37,7 @@ aside { background: var(--painel); border-right: 1px solid var(--linha); overflo
 .legenda i { width: 14px; height: 12px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.2); }
 .legenda i.ponto { border-radius: 50%; width: 10px; height: 10px; }
 .legenda i.linha { height: 3px; border: 0; }
+.leaflet-destaque-pane, .leaflet-destaque-pane * { pointer-events: none !important; }  /* destaque não captura cliques */
 .legenda .item { cursor: pointer; border-radius: 4px; padding: 1px 4px; margin-left: -4px; }
 .legenda .item:hover { background: var(--acento-claro); color: var(--texto); }
 .legenda .item.ativo { background: #fff3b0; color: var(--texto); font-weight: 600; }
