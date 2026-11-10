@@ -101,6 +101,11 @@ dialog button { float: right; }
 <script>
 (function () {
   const CFG = window.WEBGIS_CONFIG;
+  if (!CFG) {  // modelo aberto fora da pasta gerada (sem dados/config.js)
+    document.getElementById("painel").innerHTML = '<p style="padding:16px">Dados não encontrados. Abra o '
+      + '<b>index.html</b> da pasta <b>webgis/</b> gerada por <code>scripts/31_webgis.py</code>.</p>';
+    return;
+  }
   window.CAMADAS_DADOS = window.CAMADAS_DADOS || {};
   const mapa = L.map("mapa", { preferCanvas: true, zoomControl: true });
   mapa.fitBounds(CFG.limites);
