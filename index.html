@@ -112,15 +112,18 @@ dialog button { float: right; }
   L.control.scale({ imperial: false }).addTo(mapa);
 
   const bases = {
-    "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { maxZoom: 19, attribution: "© OpenStreetMap" }),
+    // mapas de fundo da Esri: funcionam também com o arquivo aberto do disco (os tiles do OSM exigem Referer)
+    "Ruas (Esri)": L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "Esri, HERE, Garmin, © OpenStreetMap contributors" }),
     "Imagem de satélite (Esri)": L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }),
-    "Relevo (OpenTopoMap)": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-      { maxZoom: 17, attribution: "© OpenStreetMap, SRTM | OpenTopoMap (CC-BY-SA)" }),
+    "Topográfico (Esri)": L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "Esri, HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors" }),
   };
-  bases["OpenStreetMap"].addTo(mapa);
+  bases["Ruas (Esri)"].addTo(mapa);
   L.control.layers(bases, null, { position: "topright" }).addTo(mapa);
 
   mapa.createPane("rasters").style.zIndex = 350;
