@@ -37,6 +37,10 @@ aside { background: var(--painel); border-right: 1px solid var(--linha); overflo
 .legenda i { width: 14px; height: 12px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.2); }
 .legenda i.ponto { border-radius: 50%; width: 10px; height: 10px; }
 .legenda i.linha { height: 3px; border: 0; }
+.legenda .item { cursor: pointer; border-radius: 4px; padding: 1px 4px; margin-left: -4px; }
+.legenda .item:hover { background: var(--acento-claro); color: var(--texto); }
+.legenda .item.ativo { background: #fff3b0; color: var(--texto); font-weight: 600; }
+.legenda .dica { font-size: 11px; font-style: italic; margin: 2px 0 4px; }
 select { margin: 4px 0 4px 26px; width: calc(100% - 26px); font: inherit; font-size: 12px; padding: 3px; }
 .carregando { font-size: 12px; color: var(--suave); margin-left: 26px; }
 .leaflet-popup-content { margin: 10px 12px; min-width: 220px; }
@@ -176,11 +180,20 @@ dialog button { float: right; }
 
   // ---- estilos
   const SEQ = ["#ffffcc", "#a1dab4", "#41b6c4", "#2c7fb8", "#253494"];
-  const coro = { campo: "nativa_2025_pct", quebras: [] };
   function quebras(dados, campo) {
     const v = dados.features.map(f => f.properties[campo]).filter(x => typeof x === "number").sort((a, b) => a - b);
     if (!v.length) return [];
-    return [0.2, 0.4, 0.6, 0.8].map(q => v[Math.floor(q * (v.length - 1))]);
+    // quintis sem repetição; quebras iguais ao mínimo não criam faixa (ex.: indicadores com muitos zeros)
+    const q = [0.2, 0.4, 0.6, 0.8].map(q => v[Math.floor(q * (v.length - 1))]);
+    let b = [...new Set(q)].filter(x => x > v[0]);
+    const pos = v.filter(x => x > v[0]);
+    if (b.length < 2 && pos.length)  // maioria no valor mínimo: faixas pelos valores acima dele
+      b = [...new Set([pos[0], ...[0.33, 0.66].map(t => pos[Math.floor(t * (pos.length - 1))])])];
+    return b;
+  }
+  function paleta(n) {  // n cores espalhadas na rampa sequencial
+    if (n <= 1) return [SEQ[2]];
+    return Array.from({ length: n }, (_, i) => SEQ[Math.round(i * (SEQ.length - 1) / (n - 1))]);
   }
   function corFaixa(x, lim, cores) {
     if (typeof x !== "number") return "#cccccc";
@@ -189,7 +202,7 @@ dialog button { float: right; }
   }
   function corDe(c, p) {
     const e = c.estilo;
-    if (e.coropletico) return corFaixa(p[coro.campo], coro.quebras, SEQ);
+    if (e.coropletico) return corFaixa(p[c.coro.campo], c.coro.quebras, paleta(c.coro.quebras.length + 1));
     if (e.faixas) return corFaixa(p[e.faixas], e.limites, e.cores);
     if (e.campo) return e.cores[String(p[e.campo])] || "#999999";
     return e.cor || "#3388ff";
@@ -221,7 +234,7 @@ dialog button { float: right; }
     if (!camadasLeaflet[c.id]) {
       aviso.textContent = "carregando…";
       const dados = await carregarDados(c.id);
-      if (c.estilo.coropletico) coro.quebras = quebras(dados, coro.campo);
+      if (c.estilo.coropletico) c.coro.quebras = quebras(dados, c.coro.campo);
       const e = c.estilo;
       camadasLeaflet[c.id] = L.geoJSON(dados, {
         interactive: !e.contorno,  // o contorno do limite não intercepta cliques das camadas de baixo
@@ -259,14 +272,59 @@ dialog button { float: right; }
   function legendaHTML(c) {
     const e = c.estilo;
     if (e.coropletico) {
-      const q = coro.quebras, f = v => fmt(v);
-      if (!q.length) return "";
-      const rot = [`< ${f(q[0])}`, `${f(q[0])} – ${f(q[1])}`, `${f(q[1])} – ${f(q[2])}`, `${f(q[2])} – ${f(q[3])}`, `≥ ${f(q[3])}`];
-      return rot.map((r, i) => `<div>${sw(SEQ[i], "Polygon")}${r}</div>`).join("");
+      const q = c.coro.quebras, f = v => fmt(v), cores = paleta(q.length + 1);
+      const rot = q.length ? [`< ${f(q[0])}`, ...q.slice(1).map((x, i) => `${f(q[i])} – ${f(x)}`), `≥ ${f(q[q.length - 1])}`]
+                           : ["valor único"];
+      return DICA + rot.map((r, i) => `<div class="item" data-k="${i}">${sw(cores[i], "Polygon")}${r}</div>`).join("");
     }
-    if (e.faixas) return e.rotulos.map((r, i) => `<div>${sw(e.cores[i], c.geom)}${r}</div>`).join("");
-    if (e.campo) return Object.entries(e.cores).map(([k, v]) => `<div>${sw(v, c.geom)}${esc(k)}</div>`).join("");
+    if (e.faixas) return DICA + e.rotulos.map((r, i) => `<div class="item" data-k="${i}">${sw(e.cores[i], c.geom)}${r}</div>`).join("");
+    if (e.campo) return DICA + Object.entries(e.cores).map(([k, v]) => `<div class="item" data-k="${esc(k)}">${sw(v, c.geom)}${esc(k)}</div>`).join("");
     return "";
+  }
+  const DICA = '<div class="dica">Clique numa classe para vê-la no mapa</div>';
+
+  // ---- destaque da classe clicada na legenda (todas as feições da classe, em amarelo)
+  const rendClasse = L.canvas({ pane: "destaque" });
+  let classe = null;  // {id, k, el, camada}
+  function faixa(x, lim) {
+    if (typeof x !== "number") return -1;
+    let i = 0; while (i < lim.length && x >= lim[i]) i++;
+    return i;
+  }
+  function pertence(c, p, k) {
+    const e = c.estilo;
+    if (e.coropletico) return faixa(p[c.coro.campo], c.coro.quebras) === Number(k);
+    if (e.faixas) return faixa(p[e.faixas], e.limites) === Number(k);
+    return String(p[e.campo]) === k;
+  }
+  function limparClasse() {
+    if (!classe) return;
+    if (classe.camada) mapa.removeLayer(classe.camada);
+    if (classe.limpar) classe.limpar();
+    classe.el.classList.remove("ativo");
+    classe = null;
+  }
+  function enquadrar(lim) {
+    if (lim.getNorthEast().equals(lim.getSouthWest())) mapa.setView(lim.getCenter(), 15);
+    else mapa.fitBounds(lim, { padding: [30, 30], maxZoom: 15 });
+  }
+  function clicarClasse(c, el) {
+    const k = el.dataset.k, mesma = classe && classe.id === c.id && classe.k === k;
+    limparClasse();
+    if (mesma) return;
+    const l = camadasLeaflet[c.id];
+    if (!l) return;
+    const feats = l._dados.features.filter(f => pertence(c, f.properties, k));
+    if (!feats.length) return;
+    const camada = L.geoJSON({ type: "FeatureCollection", features: feats }, {
+      pane: "destaque", renderer: rendClasse, interactive: false,
+      style: { color: "#ffd400", weight: 2.5, opacity: 1, fillColor: "#ffd400", fillOpacity: 0.3 },
+      pointToLayer: (f, ll) => L.circleMarker(ll, { pane: "destaque", renderer: rendClasse, radius: 6,
+                                                    color: "#ffd400", weight: 2.5, fillOpacity: 0 }),
+    }).addTo(mapa);
+    el.classList.add("ativo");
+    classe = { id: c.id, k, el, camada };
+    enquadrar(camada.getBounds());
   }
 
   // ---- painel
@@ -286,22 +344,29 @@ dialog button { float: right; }
       const cb = div.querySelector("input"), leg = div.querySelector(".legenda"), aviso = div.querySelector(".carregando");
       const sel = div.querySelector("select");
       if (sel) {
-        Object.entries(c.campos).filter(([k]) => !["bacia", "rio_x"].includes(k)).forEach(([k, r]) => {
-          const o = document.createElement("option"); o.value = k; o.textContent = r;
-          if (k === coro.campo) o.selected = true; sel.appendChild(o);
+        c.coro = { campo: c.estilo.padrao, quebras: [] };
+        (c.estilo.numericos || []).forEach(k => {
+          const o = document.createElement("option"); o.value = k; o.textContent = c.campos[k];
+          if (k === c.coro.campo) o.selected = true; sel.appendChild(o);
         });
         sel.addEventListener("change", () => {
-          coro.campo = sel.value;
+          if (classe && classe.id === c.id) limparClasse();
+          c.coro.campo = sel.value;
           const l = camadasLeaflet[c.id];
-          if (l) { coro.quebras = quebras(l._dados, coro.campo); l.setStyle(estiloDe(c)); }
+          if (l) { c.coro.quebras = quebras(l._dados, c.coro.campo); l.setStyle(estiloDe(c)); }
           leg.innerHTML = legendaHTML(c);
         });
       }
+      leg.addEventListener("click", ev => {
+        const it = ev.target.closest(".item");
+        if (it) clicarClasse(c, it);
+      });
       const atualizar = async () => {
         if (cb.checked) {
           try { await ligar(c, aviso); } catch (err) { aviso.textContent = "não foi possível carregar a camada"; cb.checked = false; return; }
           leg.innerHTML = legendaHTML(c); leg.hidden = !leg.innerHTML;
         } else {
+          if (classe && classe.id === c.id) limparClasse();
           if (camadasLeaflet[c.id]) mapa.removeLayer(camadasLeaflet[c.id]);
           leg.hidden = true;
         }
@@ -321,14 +386,31 @@ dialog button { float: right; }
     const div = document.createElement("div");
     div.className = "camada";
     div.innerHTML = `<label><input type="checkbox"><span>${esc(r.titulo)}</span></label><div class="legenda" hidden>`
-      + r.legenda.map(([n, cor]) => `<div>${sw(cor, "Polygon")}${esc(n)}</div>`).join("") + "</div>";
+      + DICA + r.legenda.map(([n, cor, v]) => `<div class="item" data-k="${v}">${sw(cor, "Polygon")}${esc(n)}</div>`).join("")
+      + "</div>";
     const cb = div.querySelector("input"), leg = div.querySelector(".legenda");
     let img = null;
     cb.addEventListener("change", () => {
       if (cb.checked) {
         img = img || L.imageOverlay(`img/${r.id}.png`, r.limites, { opacity: 0.75, pane: "rasters" });
         img.addTo(mapa); leg.hidden = false;
-      } else { if (img) mapa.removeLayer(img); leg.hidden = true; }
+      } else {
+        if (classe && classe.id === r.id) limparClasse();
+        if (img) mapa.removeLayer(img); leg.hidden = true;
+      }
+    });
+    leg.addEventListener("click", ev => {  // mostra só a classe clicada (clicar de novo volta ao mapa completo)
+      const it = ev.target.closest(".item");
+      if (!it || !img) return;
+      const k = it.dataset.k, mesma = classe && classe.id === r.id && classe.k === k;
+      limparClasse();
+      if (mesma) return;
+      const ent = r.legenda.find(x => String(x[2]) === k);
+      const so = L.imageOverlay(`img/${r.id}__${k}.png`, r.limites, { opacity: 0.9, pane: "rasters" }).addTo(mapa);
+      mapa.removeLayer(img);
+      it.classList.add("ativo");
+      classe = { id: r.id, k, el: it, camada: so, limpar: () => { if (cb.checked) img.addTo(mapa); } };
+      enquadrar(L.latLngBounds(ent[3]));
     });
     detR.appendChild(div);
   });
@@ -336,7 +418,7 @@ dialog button { float: right; }
 
   const nota = document.createElement("p");
   nota.style.cssText = "font-size:12px;color:var(--suave);padding:12px 16px 0;margin:0";
-  nota.innerHTML = "Clique nas feições para ver os atributos. Fontes e métodos: Relatório Final do projeto (UFCAT, 2026).";
+  nota.innerHTML = "Clique nas feições para ver os atributos ou numa classe da legenda para destacá-la no mapa. Fontes e métodos: Relatório Final do projeto (UFCAT, 2026).";
   painel.appendChild(nota);
 
   document.getElementById("sobre").onclick = () => document.getElementById("dlg").showModal();
