@@ -44,6 +44,11 @@ select { margin: 4px 0 4px 26px; width: calc(100% - 26px); font: inherit; font-s
 .pop table { border-collapse: collapse; font-size: 12px; }
 .pop td { padding: 2px 6px 2px 0; vertical-align: top; border-bottom: 1px solid #eef1ef; }
 .pop td:first-child { color: var(--suave); }
+.pop button.zoom { margin-top: 8px; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 5px; cursor: pointer;
+                   border: 1px solid var(--acento); background: var(--acento-claro); color: var(--acento); }
+.leaflet-tooltip.rotulo { background: transparent; border: 0; box-shadow: none; padding: 0; font-weight: 700; font-size: 11px;
+                          color: #08306b; text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff; }
+.leaflet-tooltip.rotulo::before { display: none; }
 #coord { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(255,255,255,.85);
          padding: 2px 8px; border-radius: 4px; font-size: 11px; pointer-events: none; }
 .mapa-wrap { position: relative; min-height: 0; }
@@ -138,8 +143,36 @@ dialog button { float: right; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   function popup(c, props) {
     const linhas = Object.entries(c.campos).map(([k, r]) => `<tr><td>${esc(r)}</td><td>${esc(fmt(props[k]))}</td></tr>`);
-    return `<div class="pop"><h3>${esc(c.titulo)}</h3><table>${linhas.join("")}</table></div>`;
+    return `<div class="pop"><h3>${esc(c.titulo)}</h3><table>${linhas.join("")}</table>`
+      + `<button class="zoom" type="button">Aproximar</button></div>`;
   }
+
+  // ---- destaque da feição selecionada (contorno amarelo acima das camadas, até fechar o popup)
+  mapa.createPane("destaque").style.zIndex = 640;
+  const rendDestaque = L.svg({ pane: "destaque" });
+  let destaque = null;
+  function destacar(feicao) {
+    if (destaque) mapa.removeLayer(destaque);
+    destaque = L.geoJSON(feicao, {
+      pane: "destaque", renderer: rendDestaque, interactive: false,
+      style: { color: "#ffd400", weight: 4, opacity: 1, fillColor: "#ffd400", fillOpacity: 0.12 },
+      pointToLayer: (f, ll) => L.circleMarker(ll, { pane: "destaque", renderer: rendDestaque, radius: 9, color: "#ffd400",
+                                                    weight: 3, fillOpacity: 0 }),
+    }).addTo(mapa);
+    return destaque;
+  }
+  mapa.on("popupclose", () => { if (destaque) { mapa.removeLayer(destaque); destaque = null; } });
+  mapa.on("popupopen", ev => {
+    const b = ev.popup.getElement().querySelector("button.zoom");
+    if (b) {
+      b.onclick = () => {  // usa o destaque vigente: o popup abre antes do evento de clique que cria o destaque
+        if (!destaque) return;
+        const lim = destaque.getBounds();
+        if (lim.getNorthEast().equals(lim.getSouthWest())) mapa.setView(lim.getCenter(), 15);
+        else mapa.fitBounds(lim, { padding: [30, 30], maxZoom: 16 });
+      };
+    }
+  });
 
   // ---- estilos
   const SEQ = ["#ffffcc", "#a1dab4", "#41b6c4", "#2c7fb8", "#253494"];
@@ -166,6 +199,7 @@ dialog button { float: right; }
       const cor = corDe(c, f.properties), e = c.estilo;
       if (c.geom.includes("Line")) return { color: cor, weight: e.peso || 1.5, opacity: 0.9 };
       if (e.contorno) return { color: cor, weight: 2.2, fill: false };
+      if (e.limites) return { color: cor, weight: 1.6, opacity: 0.9, fillColor: cor, fillOpacity: 0 };
       return { color: e.campo || e.coropletico ? "#555" : cor, weight: e.coropletico ? 1 : 0.5,
                fillColor: cor, fillOpacity: e.opac || 0.6, opacity: 0.7 };
     };
@@ -194,7 +228,12 @@ dialog button { float: right; }
         style: estiloDe(c),
         pointToLayer: (f, ll) => L.circleMarker(ll, { radius: e.raio || 4, color: "#fff", weight: 0.6,
                                                      fillColor: corDe(c, f.properties), fillOpacity: 0.9 }),
-        onEachFeature: (f, l) => l.bindPopup(() => popup(c, f.properties), { maxWidth: 360 }),
+        onEachFeature: (f, l) => {
+          l.bindPopup(() => popup(c, f.properties), { maxWidth: 360 });
+          l.on("click", () => destacar(f));
+          if (e.rotulo) l.bindTooltip(String(f.properties[e.rotulo]), { permanent: true, direction: "center",
+                                                                        className: "rotulo" });
+        },
       });
       camadasLeaflet[c.id]._dados = dados;
       aviso.textContent = "";
@@ -206,7 +245,7 @@ dialog button { float: right; }
     Object.values(camadasLeaflet).forEach(l => {
       if (!mapa.hasLayer(l)) return;
       const c = CFG.camadas.find(x => camadasLeaflet[x.id] === l);
-      if (c && (c.geom.includes("Line") || c.geom === "Point" || c.estilo.contorno)) l.bringToFront();
+      if (c && (c.estilo.limites || c.geom.includes("Line") || c.geom === "Point" || c.estilo.contorno)) l.bringToFront();
     });
     if (camadasLeaflet.limite_municipal && mapa.hasLayer(camadasLeaflet.limite_municipal))
       camadasLeaflet.limite_municipal.bringToFront();
