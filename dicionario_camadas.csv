@@ -23,7 +23,6 @@ processos_minerarios,Polygon,364.0,ANM – SIGMINE (nov/2026),Processos ativos e
 zoneamento_insumos,MultiPolygon,3.0,Próprios autores (2026),Zoneamento preliminar de rochas para insumo agrícola,zona
 rasters/capacidade_uso_30m.tif,raster,,ver relatório,capacidade uso 30m,valor do pixel
 rasters/declive_lepsch_topodata_30m.tif,raster,,ver relatório,declive lepsch topodata 30m,valor do pixel
-rasters/capacidade_uso_versao_anterior_12m5.tif,raster,,ver relatório,capacidade uso versao anterior 12m5,valor do pixel
 rasters/uso_cobertura_mapbiomas_2025_30m.tif,raster,,ver relatório,uso cobertura mapbiomas 2025 30m,valor do pixel
 rasters/uso_cobertura_mapbiomas_1985_30m.tif,raster,,ver relatório,uso cobertura mapbiomas 1985 30m,valor do pixel
 rasters/declividade_pct_topodata_30m.tif,raster,,ver relatório,declividade pct topodata 30m,valor do pixel
