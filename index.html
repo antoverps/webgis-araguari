@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGIS Araguari (MG)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root {
+  --bg: #f6f7f5; --painel: #ffffff; --texto: #1f2a24; --suave: #5b6b62; --linha: #dde3df;
+  --acento: #1d6b4f; --acento-claro: #e5f1ec; --sombra: 0 1px 3px rgba(0,0,0,.12);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texto); background: var(--bg);
+       display: grid; grid-template-rows: auto 1fr; }
+header { background: var(--acento); color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+header p { margin: 0; font-size: 12px; opacity: .85; }
+header .esp { flex: 1; }
+header button { background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 6px;
+                padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+main { display: grid; grid-template-columns: 330px 1fr; min-height: 0; }
+aside { background: var(--painel); border-right: 1px solid var(--linha); overflow-y: auto; padding: 8px 0 16px; }
+#mapa { min-height: 0; }
+.grupo { border-bottom: 1px solid var(--linha); }
+.grupo > summary { padding: 9px 16px; font-weight: 600; cursor: pointer; color: var(--acento); list-style: none; }
+.grupo > summary::-webkit-details-marker { display: none; }
+.grupo > summary::before { content: "▸ "; }
+.grupo[open] > summary::before { content: "▾ "; }
+.camada { padding: 4px 16px 6px 22px; }
+.camada label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.camada input { margin-top: 3px; accent-color: var(--acento); }
+.camada .n { color: var(--suave); font-size: 12px; }
+.legenda { margin: 4px 0 2px 26px; font-size: 12px; color: var(--suave); }
+.legenda div { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+.legenda i { width: 14px; height: 12px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,.2); }
+.legenda i.ponto { border-radius: 50%; width: 10px; height: 10px; }
+.legenda i.linha { height: 3px; border: 0; }
+select { margin: 4px 0 4px 26px; width: calc(100% - 26px); font: inherit; font-size: 12px; padding: 3px; }
+.carregando { font-size: 12px; color: var(--suave); margin-left: 26px; }
+.leaflet-popup-content { margin: 10px 12px; min-width: 220px; }
+.pop h3 { font-size: 13px; margin: 0 0 6px; color: var(--acento); }
+.pop table { border-collapse: collapse; font-size: 12px; }
+.pop td { padding: 2px 6px 2px 0; vertical-align: top; border-bottom: 1px solid #eef1ef; }
+.pop td:first-child { color: var(--suave); }
+#coord { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); z-index: 500; background: rgba(255,255,255,.85);
+         padding: 2px 8px; border-radius: 4px; font-size: 11px; pointer-events: none; }
+.mapa-wrap { position: relative; min-height: 0; }
+.mapa-wrap #mapa { position: absolute; inset: 0; }
+dialog { max-width: 620px; border: 0; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.25); padding: 20px 22px; color: var(--texto); }
+dialog h2 { margin-top: 0; font-size: 17px; color: var(--acento); }
+dialog p, dialog li { font-size: 13px; }
+dialog button { float: right; }
+#abrir-painel { display: none; }
+@media (max-width: 760px) {
+  main { grid-template-columns: 1fr; }
+  aside { position: fixed; top: 52px; bottom: 0; left: 0; width: min(86vw, 330px); z-index: 1100; transform: translateX(-100%);
+          transition: transform .2s; box-shadow: var(--sombra); }
+  aside.aberto { transform: none; }
+  #abrir-painel { display: inline-block; }
+  header p { display: none; }
+  header h1 { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <button id="abrir-painel" aria-label="Camadas">☰</button>
+  <div>
+    <h1>Diagnóstico Geoecológico e Socioeconômico de Araguari (MG)</h1>
+    <p>Base cartográfica consolidada – consulta pública · SIRGAS 2000</p>
+  </div>
+  <div class="esp"></div>
+  <button id="sobre">Sobre</button>
+</header>
+<main>
+  <aside id="painel"></aside>
+  <div class="mapa-wrap"><div id="mapa"></div><div id="coord"></div></div>
+</main>
+<dialog id="dlg">
+  <button onclick="this.closest('dialog').close()">Fechar</button>
+  <h2>Sobre este WebGIS</h2>
+  <p>Visualizador da base cartográfica consolidada do projeto <em>Diagnóstico Geoecológico e Socioeconômico do
+  Município de Araguari (MG)</em>, desenvolvido pela Universidade Federal de Catalão (UFCAT) para a Prefeitura
+  Municipal de Araguari.</p>
+  <ul>
+    <li>As camadas reproduzem o GeoPackage entregue com o Relatório Final (SIRGAS 2000/UTM 22S), aqui
+    simplificadas para exibição na web; para análises, use os arquivos originais.</li>
+    <li>Fontes, métodos e limitações de cada camada estão no Relatório Final (capítulos 3 e 4) e no dicionário de
+    camadas que acompanha a base.</li>
+    <li>Nomes de titulares de outorgas e de processos minerários não são exibidos.</li>
+    <li>Escala de uso: as camadas regionais (geologia, solos, aptidão, geomorfologia) têm escala de origem entre
+    1:250.000 e 1:1.000.000 e não substituem levantamentos de detalhe.</li>
+  </ul>
+  <p><a href="dicionario_camadas.csv">Dicionário de camadas (CSV)</a>. A base completa (GeoPackage e rasters em
+     resolução original) acompanha o Relatório Final entregue à Prefeitura Municipal de Araguari.</p>
+</dialog>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="dados/config.js"></script>
+<script>
+(function () {
+  const CFG = window.WEBGIS_CONFIG;
+  window.CAMADAS_DADOS = window.CAMADAS_DADOS || {};
+  const mapa = L.map("mapa", { preferCanvas: true, zoomControl: true });
+  mapa.fitBounds(CFG.limites);
+  L.control.scale({ imperial: false }).addTo(mapa);
+
+  const bases = {
+    "OpenStreetMap": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "© OpenStreetMap" }),
+    "Imagem de satélite (Esri)": L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      { maxZoom: 19, attribution: "Esri, Maxar, Earthstar Geographics" }),
+    "Relevo (OpenTopoMap)": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      { maxZoom: 17, attribution: "© OpenStreetMap, SRTM | OpenTopoMap (CC-BY-SA)" }),
+  };
+  bases["OpenStreetMap"].addTo(mapa);
+  L.control.layers(bases, null, { position: "topright" }).addTo(mapa);
+
+  mapa.createPane("rasters").style.zIndex = 350;
+  const coord = document.getElementById("coord");
+  mapa.on("mousemove", e => coord.textContent = `Lat ${e.latlng.lat.toFixed(5)}  Lon ${e.latlng.lng.toFixed(5)}`);
+
+  const fmt = v => {
+    if (v === null || v === undefined || v === "") return "–";
+    if (typeof v === "number") return v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+    return String(v);
+  };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function popup(c, props) {
+    const linhas = Object.entries(c.campos).map(([k, r]) => `<tr><td>${esc(r)}</td><td>${esc(fmt(props[k]))}</td></tr>`);
+    return `<div class="pop"><h3>${esc(c.titulo)}</h3><table>${linhas.join("")}</table></div>`;
+  }
+
+  // ---- estilos
+  const SEQ = ["#ffffcc", "#a1dab4", "#41b6c4", "#2c7fb8", "#253494"];
+  const coro = { campo: "nativa_2025_pct", quebras: [] };
+  function quebras(dados, campo) {
+    const v = dados.features.map(f => f.properties[campo]).filter(x => typeof x === "number").sort((a, b) => a - b);
+    if (!v.length) return [];
+    return [0.2, 0.4, 0.6, 0.8].map(q => v[Math.floor(q * (v.length - 1))]);
+  }
+  function corFaixa(x, lim, cores) {
+    if (typeof x !== "number") return "#cccccc";
+    let i = 0; while (i < lim.length && x >= lim[i]) i++;
+    return cores[i];
+  }
+  function corDe(c, p) {
+    const e = c.estilo;
+    if (e.coropletico) return corFaixa(p[coro.campo], coro.quebras, SEQ);
+    if (e.faixas) return corFaixa(p[e.faixas], e.limites, e.cores);
+    if (e.campo) return e.cores[String(p[e.campo])] || "#999999";
+    return e.cor || "#3388ff";
+  }
+  function estiloDe(c) {
+    return f => {
+      const cor = corDe(c, f.properties), e = c.estilo;
+      if (c.geom.includes("Line")) return { color: cor, weight: e.peso || 1.5, opacity: 0.9 };
+      if (e.contorno) return { color: cor, weight: 2.2, fill: false };
+      return { color: e.campo || e.coropletico ? "#555" : cor, weight: e.coropletico ? 1 : 0.5,
+               fillColor: cor, fillOpacity: e.opac || 0.6, opacity: 0.7 };
+    };
+  }
+
+  // ---- carregamento sob demanda
+  const camadasLeaflet = {};
+  function carregarDados(id) {
+    if (window.CAMADAS_DADOS[id]) return Promise.resolve(window.CAMADAS_DADOS[id]);
+    return new Promise((ok, erro) => {
+      const s = document.createElement("script");
+      s.src = `dados/${id}.js`;
+      s.onload = () => ok(window.CAMADAS_DADOS[id]);
+      s.onerror = erro;
+      document.head.appendChild(s);
+    });
+  }
+  async function ligar(c, aviso) {
+    if (!camadasLeaflet[c.id]) {
+      aviso.textContent = "carregando…";
+      const dados = await carregarDados(c.id);
+      if (c.estilo.coropletico) coro.quebras = quebras(dados, coro.campo);
+      const e = c.estilo;
+      camadasLeaflet[c.id] = L.geoJSON(dados, {
+        interactive: !e.contorno,  // o contorno do limite não intercepta cliques das camadas de baixo
+        style: estiloDe(c),
+        pointToLayer: (f, ll) => L.circleMarker(ll, { radius: e.raio || 4, color: "#fff", weight: 0.6,
+                                                     fillColor: corDe(c, f.properties), fillOpacity: 0.9 }),
+        onEachFeature: (f, l) => l.bindPopup(() => popup(c, f.properties), { maxWidth: 360 }),
+      });
+      camadasLeaflet[c.id]._dados = dados;
+      aviso.textContent = "";
+    }
+    camadasLeaflet[c.id].addTo(mapa);
+    ordenar();
+  }
+  function ordenar() {  // pontos e linhas por cima de polígonos; limite sempre visível
+    Object.values(camadasLeaflet).forEach(l => {
+      if (!mapa.hasLayer(l)) return;
+      const c = CFG.camadas.find(x => camadasLeaflet[x.id] === l);
+      if (c && (c.geom.includes("Line") || c.geom === "Point" || c.estilo.contorno)) l.bringToFront();
+    });
+    if (camadasLeaflet.limite_municipal && mapa.hasLayer(camadasLeaflet.limite_municipal))
+      camadasLeaflet.limite_municipal.bringToFront();
+  }
+
+  // ---- legendas
+  function sw(cor, geom) {
+    const cls = geom === "Point" ? "ponto" : geom.includes("Line") ? "linha" : "";
+    return `<i class="${cls}" style="background:${cor}"></i>`;
+  }
+  function legendaHTML(c) {
+    const e = c.estilo;
+    if (e.coropletico) {
+      const q = coro.quebras, f = v => fmt(v);
+      if (!q.length) return "";
+      const rot = [`< ${f(q[0])}`, `${f(q[0])} – ${f(q[1])}`, `${f(q[1])} – ${f(q[2])}`, `${f(q[2])} – ${f(q[3])}`, `≥ ${f(q[3])}`];
+      return rot.map((r, i) => `<div>${sw(SEQ[i], "Polygon")}${r}</div>`).join("");
+    }
+    if (e.faixas) return e.rotulos.map((r, i) => `<div>${sw(e.cores[i], c.geom)}${r}</div>`).join("");
+    if (e.campo) return Object.entries(e.cores).map(([k, v]) => `<div>${sw(v, c.geom)}${esc(k)}</div>`).join("");
+    return "";
+  }
+
+  // ---- painel
+  const painel = document.getElementById("painel");
+  const grupos = {};
+  CFG.camadas.forEach(c => (grupos[c.grupo] = grupos[c.grupo] || []).push(c));
+  Object.entries(grupos).forEach(([g, lista], gi) => {
+    const det = document.createElement("details");
+    det.className = "grupo"; det.open = gi < 2;
+    det.innerHTML = `<summary>${esc(g)}</summary>`;
+    lista.forEach(c => {
+      const div = document.createElement("div");
+      div.className = "camada";
+      div.innerHTML = `<label><input type="checkbox"><span>${esc(c.titulo)} <span class="n">(${c.n.toLocaleString("pt-BR")})</span></span></label>`
+        + (c.estilo.coropletico ? `<select></select>` : "")
+        + `<div class="carregando"></div><div class="legenda" hidden></div>`;
+      const cb = div.querySelector("input"), leg = div.querySelector(".legenda"), aviso = div.querySelector(".carregando");
+      const sel = div.querySelector("select");
+      if (sel) {
+        Object.entries(c.campos).filter(([k]) => !["bacia", "rio_x"].includes(k)).forEach(([k, r]) => {
+          const o = document.createElement("option"); o.value = k; o.textContent = r;
+          if (k === coro.campo) o.selected = true; sel.appendChild(o);
+        });
+        sel.addEventListener("change", () => {
+          coro.campo = sel.value;
+          const l = camadasLeaflet[c.id];
+          if (l) { coro.quebras = quebras(l._dados, coro.campo); l.setStyle(estiloDe(c)); }
+          leg.innerHTML = legendaHTML(c);
+        });
+      }
+      const atualizar = async () => {
+        if (cb.checked) {
+          try { await ligar(c, aviso); } catch (err) { aviso.textContent = "não foi possível carregar a camada"; cb.checked = false; return; }
+          leg.innerHTML = legendaHTML(c); leg.hidden = !leg.innerHTML;
+        } else {
+          if (camadasLeaflet[c.id]) mapa.removeLayer(camadasLeaflet[c.id]);
+          leg.hidden = true;
+        }
+      };
+      cb.addEventListener("change", atualizar);
+      if (c.ligada) { cb.checked = true; atualizar(); }
+      det.appendChild(div);
+    });
+    painel.appendChild(det);
+  });
+
+  // rasters
+  const detR = document.createElement("details");
+  detR.className = "grupo";
+  detR.innerHTML = "<summary>Mapas matriciais (30 m)</summary>";
+  CFG.rasters.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "camada";
+    div.innerHTML = `<label><input type="checkbox"><span>${esc(r.titulo)}</span></label><div class="legenda" hidden>`
+      + r.legenda.map(([n, cor]) => `<div>${sw(cor, "Polygon")}${esc(n)}</div>`).join("") + "</div>";
+    const cb = div.querySelector("input"), leg = div.querySelector(".legenda");
+    let img = null;
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        img = img || L.imageOverlay(`img/${r.id}.png`, r.limites, { opacity: 0.75, pane: "rasters" });
+        img.addTo(mapa); leg.hidden = false;
+      } else { if (img) mapa.removeLayer(img); leg.hidden = true; }
+    });
+    detR.appendChild(div);
+  });
+  painel.appendChild(detR);
+
+  const nota = document.createElement("p");
+  nota.style.cssText = "font-size:12px;color:var(--suave);padding:12px 16px 0;margin:0";
+  nota.innerHTML = "Clique nas feições para ver os atributos. Fontes e métodos: Relatório Final do projeto (UFCAT, 2026).";
+  painel.appendChild(nota);
+
+  document.getElementById("sobre").onclick = () => document.getElementById("dlg").showModal();
+  document.getElementById("abrir-painel").onclick = () => {
+    painel.style.top = document.querySelector("header").offsetHeight + "px";
+    painel.classList.toggle("aberto");
+  };
+})();
+</script>
+</body>
+</html>
