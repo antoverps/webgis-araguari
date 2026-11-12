@@ -30,3 +30,15 @@ rasters/declividade_pct_topodata_30m.tif,raster,,ver relatório,declividade pct 
 rasters/declividade_classes_embrapa_topodata_30m.tif,raster,,ver relatório,declividade classes embrapa topodata 30m,valor do pixel
 rasters/mde_topodata_30m.tif,raster,,ver relatório,mde topodata 30m,valor do pixel
 rasters/zoneamento_insumos_30m.tif,raster,,ver relatório,zoneamento insumos 30m,valor do pixel
+pocos_outorga_perfis_testes,Point,831.0,"SIAM (2026) – processos de outorga, portarias 2018–2024","Perfis litológicos e testes de bombeamento dos poços tubulares outorgados (profundidade da rocha, aquífero captado, níveis, capacidade específica e transmissividade); sem processo e sem titular","sistema_aflorante, cota_terreno_m, perfil, prof_poco_m, rocha_atingida, prof_rocha_m, coluna_sem_rocha_m, cota_contato_rocha_m, aquifero_captado, nivel_estatico_m, nivel_dinamico_m, vazao_teste_m3h, cap_especifica_m3hm, transmissividade_m2d"
+recarga_comprometimento_subbacias,Polygon,51.0,Próprios autores (2026); IGAM (2018–2024); SGB (RIMAS),"Volume subterrâneo autorizado sobre a recarga (360 e 715 mm/ano) e sobre um quarto da recarga, por sub-bacia (parte no município)","bacia, area_no_municipio_km2, portarias_sub, vol_sub_m3_ano, area_bauru_serra_geral_pct, vol_sobre_recarga_360mm_pct, vol_sobre_recarga_715mm_pct, vol_sobre_quarto_recarga_360mm_pct, vol_sobre_quarto_recarga_715mm_pct, classe_360mm"
+rasters/topo_basalto_cota_m_250m.tif,raster,,ver relatório,cota do topo da Formação Serra Geral (m),valor do pixel
+rasters/espessura_cobertura_m_250m.tif,raster,,ver relatório,espessura das coberturas e do Grupo Bauru sobre o basalto (m),valor do pixel
+rasters/espessura_cobertura_classes_250m.tif,raster,,ver relatório,espessura da cobertura em classes: 1 < 10 m; 2 10–30; 3 30–50; 4 50–80; 5 > 80 m,classe (código do pixel)
+rasters/espessura_serra_geral_m_250m.tif,raster,,ver relatório,espessura da Formação Serra Geral (m),valor do pixel
+rasters/incerteza_topo_basalto_m_1km.tif,raster,,ver relatório,desvio-padrão calibrado da krigagem do topo do basalto (m),valor do pixel
+rasters/incerteza_topo_basalto_classes_1km.tif,raster,,ver relatório,incerteza do topo do basalto: 1 < 25 m; 2 25–50 m; 3 > 50 m,classe (código do pixel)
+rasters/carga_hidraulica_m_250m.tif,raster,,ver relatório,carga hidráulica – superfície potenciométrica (m),valor do pixel
+rasters/carga_hidraulica_classes_250m.tif,raster,,ver relatório,carga hidráulica em faixas de 50 m: 1 < 550; 2 550–600; … ; 10 > 950 m,classe (código do pixel)
+rasters/vulnerabilidade_god_indice_250m.tif,raster,,ver relatório,índice de vulnerabilidade GOD (0–1),valor do pixel
+rasters/vulnerabilidade_god_classes_250m.tif,raster,,ver relatório,vulnerabilidade GOD: 1 desprezível; 2 baixa; 3 média; 4 alta; 5 extrema,classe (código do pixel)
