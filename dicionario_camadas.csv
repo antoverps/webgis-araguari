@@ -20,7 +20,7 @@ sistemas_aquiferos,"MultiPolygon,Polygon",18.0,IDE-Sisema (2026),Sistemas aquíf
 vulnerabilidade_aquiferos,"MultiPolygon,Polygon",1864.0,IDE-Sisema (2026),Vulnerabilidade natural dos aquíferos,"fid_orig, value, fx_vuln"
 geomorfologia_ibge,"MultiPolygon,Polygon",104.0,IDE-Sisema (2026),Geomorfologia (IBGE),"fid_orig, id1, cd_fcim, leg_carga, nm_dominio, nm_regiao, id_unidade, nm_unidade, letra_simb, categoria, natureza, caract, forma, dens_dren, aprof_inci, niv_alt, leg_sup, cd_leg_sup, legenda, ar_poli_km, compartime, cd_comp_id, cd_dominio, cd_unid_id"
 cobertura_florestal_2009,"MultiPolygon,Polygon",3931.0,IDE-Sisema (2026),Fitofisionomias e cobertura florestal,"id, gid, class_name, class_id, parts, length, area, hectares"
-processos_minerarios,"MultiPolygon,Polygon",364.0,ANM – SIGMINE (nov/2026),Processos ativos e unidade geológica,"PROCESSO, NUMERO, ANO, FASE, NOME, SUBS, USO, AREA_HA, UF, ULT_EVENTO, ID, OBJECTID, DSProcesso, Shape.STArea(), Shape.STLength(), unidade_geologica"
+processos_minerarios,"MultiPolygon,Polygon",356.0,ANM – SIGMINE (nov/2026),Processos ativos e unidade geológica,"PROCESSO, NUMERO, ANO, FASE, NOME, SUBS, USO, AREA_HA, UF, ULT_EVENTO, ID, OBJECTID, DSProcesso, Shape.STArea(), Shape.STLength(), unidade_geologica"
 zoneamento_insumos,MultiPolygon,3.0,Próprios autores (2026),Zoneamento preliminar de rochas para insumo agrícola,zona
 rasters/capacidade_uso_30m.tif,raster,,ver relatório,capacidade uso 30m,valor do pixel
 rasters/declive_lepsch_topodata_30m.tif,raster,,ver relatório,declive lepsch topodata 30m,valor do pixel
